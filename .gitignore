@@ -1,0 +1,13 @@
+.DS_Store
+*.xcuserstate
+*.swp
+
+/.build/
+/macos/.build/
+/macos/.swiftpm/
+/macos/dist/
+/sidecar/node_modules/
+/sidecar/.npm/
+
+# Required for deterministic application packaging.
+!/sidecar/package-lock.json

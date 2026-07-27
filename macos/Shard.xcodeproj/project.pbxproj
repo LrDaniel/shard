@@ -1,0 +1,455 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		E00000000000000000000002 /* Shard DMG */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = F00000000000000000000012 /* Build configuration list for PBXAggregateTarget "Shard DMG" */;
+			buildPhases = (
+				D00000000000000000000004 /* Create Shard DMG */,
+			);
+			dependencies = (
+			);
+			name = "Shard DMG";
+			productName = "Shard DMG";
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		B00000000000000000000002 /* Sources/ShardCore/Models/BSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000002 /* Sources/ShardCore/Models/BSONValue.swift */; };
+		B00000000000000000000003 /* Sources/ShardCore/Models/ConnectionProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000003 /* Sources/ShardCore/Models/ConnectionProfile.swift */; };
+		B00000000000000000000004 /* Sources/ShardCore/Models/JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000004 /* Sources/ShardCore/Models/JSONValue.swift */; };
+		B00000000000000000000005 /* Sources/ShardCore/Models/Workspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000005 /* Sources/ShardCore/Models/Workspace.swift */; };
+		B00000000000000000000006 /* Sources/ShardCore/Persistence/PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000006 /* Sources/ShardCore/Persistence/PersistenceStore.swift */; };
+		B00000000000000000000007 /* Sources/ShardCore/Security/KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000007 /* Sources/ShardCore/Security/KeychainStore.swift */; };
+		B00000000000000000000008 /* Sources/ShardCore/Sidecar/DatabaseSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000008 /* Sources/ShardCore/Sidecar/DatabaseSession.swift */; };
+		B00000000000000000000009 /* Sources/ShardCore/Sidecar/SSHTunnel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000009 /* Sources/ShardCore/Sidecar/SSHTunnel.swift */; };
+		B0000000000000000000000A /* Sources/ShardCore/Sidecar/SidecarLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000000A /* Sources/ShardCore/Sidecar/SidecarLocator.swift */; };
+		B0000000000000000000000B /* Sources/ShardCore/Sidecar/SidecarProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000000B /* Sources/ShardCore/Sidecar/SidecarProcess.swift */; };
+		B0000000000000000000000C /* Sources/ShardCore/Sidecar/SidecarProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000000C /* Sources/ShardCore/Sidecar/SidecarProtocol.swift */; };
+		B0000000000000000000000D /* Sources/ShardApp/AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000000D /* Sources/ShardApp/AppDelegate.swift */; };
+		B0000000000000000000000E /* Sources/ShardApp/Models/AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000000E /* Sources/ShardApp/Models/AppModel.swift */; };
+		B0000000000000000000000F /* Sources/ShardApp/Models/ExplorerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000000F /* Sources/ShardApp/Models/ExplorerNode.swift */; };
+		B00000000000000000000010 /* Sources/ShardApp/ShardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000010 /* Sources/ShardApp/ShardApp.swift */; };
+		B00000000000000000000011 /* Sources/ShardApp/Views/CollectionQuickOpenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* Sources/ShardApp/Views/CollectionQuickOpenView.swift */; };
+		B00000000000000000000012 /* Sources/ShardApp/Views/CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* Sources/ShardApp/Views/CommandPaletteView.swift */; };
+		B00000000000000000000013 /* Sources/ShardApp/Views/ConnectionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* Sources/ShardApp/Views/ConnectionEditorView.swift */; };
+		B00000000000000000000014 /* Sources/ShardApp/Views/ConnectionManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000014 /* Sources/ShardApp/Views/ConnectionManagerView.swift */; };
+		B00000000000000000000015 /* Sources/ShardApp/Views/DatabaseSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* Sources/ShardApp/Views/DatabaseSidebarView.swift */; };
+		B00000000000000000000016 /* Sources/ShardApp/Views/EditorWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* Sources/ShardApp/Views/EditorWorkspaceView.swift */; };
+		B00000000000000000000017 /* Sources/ShardApp/Views/QueryResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* Sources/ShardApp/Views/QueryResultsView.swift */; };
+		B00000000000000000000018 /* Sources/ShardApp/Views/ResultInspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000018 /* Sources/ShardApp/Views/ResultInspectorView.swift */; };
+		B00000000000000000000019 /* Sources/ShardApp/Views/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* Sources/ShardApp/Views/SettingsView.swift */; };
+		B0000000000000000000001A /* Sources/ShardApp/Views/SyntaxTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* Sources/ShardApp/Views/SyntaxTextEditor.swift */; };
+		B0000000000000000000001B /* Sources/ShardApp/Views/WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* Sources/ShardApp/Views/WorkspaceView.swift */; };
+		B0000000000000000000001C /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001C /* Resources/Assets.xcassets */; };
+		B00000000000000000000020 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* Security.framework */; };
+		B00000000000000000000021 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A00000000000000000000021 /* libsqlite3.tbd */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A00000000000000000000002 /* Sources/ShardCore/Models/BSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Models/BSONValue.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000003 /* Sources/ShardCore/Models/ConnectionProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Models/ConnectionProfile.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000004 /* Sources/ShardCore/Models/JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Models/JSONValue.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000005 /* Sources/ShardCore/Models/Workspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Models/Workspace.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000006 /* Sources/ShardCore/Persistence/PersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Persistence/PersistenceStore.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000007 /* Sources/ShardCore/Security/KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Security/KeychainStore.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000008 /* Sources/ShardCore/Sidecar/DatabaseSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Sidecar/DatabaseSession.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000009 /* Sources/ShardCore/Sidecar/SSHTunnel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Sidecar/SSHTunnel.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000000A /* Sources/ShardCore/Sidecar/SidecarLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Sidecar/SidecarLocator.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000000B /* Sources/ShardCore/Sidecar/SidecarProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Sidecar/SidecarProcess.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000000C /* Sources/ShardCore/Sidecar/SidecarProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardCore/Sidecar/SidecarProtocol.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000000D /* Sources/ShardApp/AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/AppDelegate.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000000E /* Sources/ShardApp/Models/AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Models/AppModel.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000000F /* Sources/ShardApp/Models/ExplorerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Models/ExplorerNode.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000010 /* Sources/ShardApp/ShardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/ShardApp.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000011 /* Sources/ShardApp/Views/CollectionQuickOpenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/CollectionQuickOpenView.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000012 /* Sources/ShardApp/Views/CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/CommandPaletteView.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000013 /* Sources/ShardApp/Views/ConnectionEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/ConnectionEditorView.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000014 /* Sources/ShardApp/Views/ConnectionManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/ConnectionManagerView.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000015 /* Sources/ShardApp/Views/DatabaseSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/DatabaseSidebarView.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000016 /* Sources/ShardApp/Views/EditorWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/EditorWorkspaceView.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000017 /* Sources/ShardApp/Views/QueryResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/QueryResultsView.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000018 /* Sources/ShardApp/Views/ResultInspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/ResultInspectorView.swift; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000019 /* Sources/ShardApp/Views/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000001A /* Sources/ShardApp/Views/SyntaxTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/SyntaxTextEditor.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000001B /* Sources/ShardApp/Views/WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/ShardApp/Views/WorkspaceView.swift; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000001C /* Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000001D /* Resources/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Resources/Info.plist; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000001E /* Sources/CSQLite/module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = Sources/CSQLite/module.modulemap; sourceTree = SOURCE_ROOT; };
+		A0000000000000000000001F /* Sources/CSQLite/shim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Sources/CSQLite/shim.h; sourceTree = SOURCE_ROOT; };
+		A00000000000000000000020 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		A00000000000000000000021 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
+		A00000000000000000000030 /* Shard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D00000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00000000000000000000020 /* Security.framework in Frameworks */,
+				B00000000000000000000021 /* libsqlite3.tbd in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000005 /* Application Sources */,
+				000000000000000000000006 /* Core Sources */,
+				000000000000000000000007 /* Resources */,
+				000000000000000000000004 /* Frameworks */,
+				000000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000030 /* Shard.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000020 /* Security.framework */,
+				A00000000000000000000021 /* libsqlite3.tbd */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		000000000000000000000005 /* Application Sources */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000000D /* Sources/ShardApp/AppDelegate.swift */,
+				A0000000000000000000000E /* Sources/ShardApp/Models/AppModel.swift */,
+				A0000000000000000000000F /* Sources/ShardApp/Models/ExplorerNode.swift */,
+				A00000000000000000000010 /* Sources/ShardApp/ShardApp.swift */,
+				A00000000000000000000011 /* Sources/ShardApp/Views/CollectionQuickOpenView.swift */,
+				A00000000000000000000012 /* Sources/ShardApp/Views/CommandPaletteView.swift */,
+				A00000000000000000000013 /* Sources/ShardApp/Views/ConnectionEditorView.swift */,
+				A00000000000000000000014 /* Sources/ShardApp/Views/ConnectionManagerView.swift */,
+				A00000000000000000000015 /* Sources/ShardApp/Views/DatabaseSidebarView.swift */,
+				A00000000000000000000016 /* Sources/ShardApp/Views/EditorWorkspaceView.swift */,
+				A00000000000000000000017 /* Sources/ShardApp/Views/QueryResultsView.swift */,
+				A00000000000000000000018 /* Sources/ShardApp/Views/ResultInspectorView.swift */,
+				A00000000000000000000019 /* Sources/ShardApp/Views/SettingsView.swift */,
+				A0000000000000000000001A /* Sources/ShardApp/Views/SyntaxTextEditor.swift */,
+				A0000000000000000000001B /* Sources/ShardApp/Views/WorkspaceView.swift */,
+			);
+			name = "Application Sources";
+			sourceTree = "<group>";
+		};
+		000000000000000000000006 /* Core Sources */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000002 /* Sources/ShardCore/Models/BSONValue.swift */,
+				A00000000000000000000003 /* Sources/ShardCore/Models/ConnectionProfile.swift */,
+				A00000000000000000000004 /* Sources/ShardCore/Models/JSONValue.swift */,
+				A00000000000000000000005 /* Sources/ShardCore/Models/Workspace.swift */,
+				A00000000000000000000006 /* Sources/ShardCore/Persistence/PersistenceStore.swift */,
+				A00000000000000000000007 /* Sources/ShardCore/Security/KeychainStore.swift */,
+				A00000000000000000000008 /* Sources/ShardCore/Sidecar/DatabaseSession.swift */,
+				A00000000000000000000009 /* Sources/ShardCore/Sidecar/SSHTunnel.swift */,
+				A0000000000000000000000A /* Sources/ShardCore/Sidecar/SidecarLocator.swift */,
+				A0000000000000000000000B /* Sources/ShardCore/Sidecar/SidecarProcess.swift */,
+				A0000000000000000000000C /* Sources/ShardCore/Sidecar/SidecarProtocol.swift */,
+				A0000000000000000000001E /* Sources/CSQLite/module.modulemap */,
+				A0000000000000000000001F /* Sources/CSQLite/shim.h */,
+			);
+			name = "Core Sources";
+			sourceTree = "<group>";
+		};
+		000000000000000000000007 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000001C /* Resources/Assets.xcassets */,
+				A0000000000000000000001D /* Resources/Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E00000000000000000000001 /* Shard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F00000000000000000000011 /* Build configuration list for PBXNativeTarget "Shard" */;
+			buildPhases = (
+				D00000000000000000000001 /* Sources */,
+				D00000000000000000000002 /* Frameworks */,
+				D00000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Shard;
+			productName = Shard;
+			productReference = A00000000000000000000030 /* Shard.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					E00000000000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					E00000000000000000000002 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = F00000000000000000000010 /* Build configuration list for PBXProject "Shard" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E00000000000000000000001 /* Shard */,
+				E00000000000000000000002 /* Shard DMG */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D00000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B0000000000000000000001C /* Resources/Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		D00000000000000000000004 /* Create Shard DMG */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Create Shard DMG";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/zsh;
+			shellScript = "\"${SRCROOT}/scripts/package-app.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D00000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00000000000000000000002 /* Sources/ShardCore/Models/BSONValue.swift in Sources */,
+				B00000000000000000000003 /* Sources/ShardCore/Models/ConnectionProfile.swift in Sources */,
+				B00000000000000000000004 /* Sources/ShardCore/Models/JSONValue.swift in Sources */,
+				B00000000000000000000005 /* Sources/ShardCore/Models/Workspace.swift in Sources */,
+				B00000000000000000000006 /* Sources/ShardCore/Persistence/PersistenceStore.swift in Sources */,
+				B00000000000000000000007 /* Sources/ShardCore/Security/KeychainStore.swift in Sources */,
+				B00000000000000000000008 /* Sources/ShardCore/Sidecar/DatabaseSession.swift in Sources */,
+				B00000000000000000000009 /* Sources/ShardCore/Sidecar/SSHTunnel.swift in Sources */,
+				B0000000000000000000000A /* Sources/ShardCore/Sidecar/SidecarLocator.swift in Sources */,
+				B0000000000000000000000B /* Sources/ShardCore/Sidecar/SidecarProcess.swift in Sources */,
+				B0000000000000000000000C /* Sources/ShardCore/Sidecar/SidecarProtocol.swift in Sources */,
+				B0000000000000000000000D /* Sources/ShardApp/AppDelegate.swift in Sources */,
+				B0000000000000000000000E /* Sources/ShardApp/Models/AppModel.swift in Sources */,
+				B0000000000000000000000F /* Sources/ShardApp/Models/ExplorerNode.swift in Sources */,
+				B00000000000000000000010 /* Sources/ShardApp/ShardApp.swift in Sources */,
+				B00000000000000000000011 /* Sources/ShardApp/Views/CollectionQuickOpenView.swift in Sources */,
+				B00000000000000000000012 /* Sources/ShardApp/Views/CommandPaletteView.swift in Sources */,
+				B00000000000000000000013 /* Sources/ShardApp/Views/ConnectionEditorView.swift in Sources */,
+				B00000000000000000000014 /* Sources/ShardApp/Views/ConnectionManagerView.swift in Sources */,
+				B00000000000000000000015 /* Sources/ShardApp/Views/DatabaseSidebarView.swift in Sources */,
+				B00000000000000000000016 /* Sources/ShardApp/Views/EditorWorkspaceView.swift in Sources */,
+				B00000000000000000000017 /* Sources/ShardApp/Views/QueryResultsView.swift in Sources */,
+				B00000000000000000000018 /* Sources/ShardApp/Views/ResultInspectorView.swift in Sources */,
+				B00000000000000000000019 /* Sources/ShardApp/Views/SettingsView.swift in Sources */,
+				B0000000000000000000001A /* Sources/ShardApp/Views/SyntaxTextEditor.swift in Sources */,
+				B0000000000000000000001B /* Sources/ShardApp/Views/WorkspaceView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F00000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F00000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		F00000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KTJW28N7YY;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = s.Shard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/Sources/CSQLite";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		F00000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KTJW28N7YY;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = s.Shard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/Sources/CSQLite";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		F00000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "Shard DMG";
+			};
+			name = Debug;
+		};
+		F00000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "Shard DMG";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F00000000000000000000010 /* Build configuration list for PBXProject "Shard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00000000000000000000001 /* Debug */,
+				F00000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F00000000000000000000011 /* Build configuration list for PBXNativeTarget "Shard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00000000000000000000003 /* Debug */,
+				F00000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F00000000000000000000012 /* Build configuration list for PBXAggregateTarget "Shard DMG" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F00000000000000000000005 /* Debug */,
+				F00000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}
