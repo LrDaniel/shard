@@ -50,6 +50,10 @@ public struct QueryRun: Codable, Identifiable, Equatable, Sendable {
     public let cursorID: String?
     public let hasMore: Bool
 
+    public var queryIdentity: QueryIdentity {
+        QueryIdentity(script: script, database: database)
+    }
+
     public init(
         id: UUID = UUID(),
         documentID: UUID,
@@ -72,6 +76,18 @@ public struct QueryRun: Codable, Identifiable, Equatable, Sendable {
         self.resultCount = resultCount
         self.cursorID = cursorID
         self.hasMore = hasMore
+    }
+}
+
+public struct QueryIdentity: Hashable, Sendable {
+    public let script: String
+    public let database: String
+
+    public init(script: String, database: String) {
+        self.script = script
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        self.database = database.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -292,6 +308,10 @@ public struct FavoriteQuery: Codable, Identifiable, Equatable, Sendable {
     public var database: String
     public var collectionName: String?
     public let createdAt: Date
+
+    public var queryIdentity: QueryIdentity {
+        QueryIdentity(script: script, database: database)
+    }
 
     public init(
         id: UUID = UUID(),

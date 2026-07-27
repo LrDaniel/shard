@@ -25,9 +25,9 @@ struct QueryResultsView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "play.rectangle")
                         .font(.title)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(ShardTheme.subtleText)
                     Text("Run a query to see results")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(ShardTheme.mutedText)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -51,7 +51,7 @@ struct QueryResultsView: View {
     private func resultBar(_ run: QueryRun) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "tablecells")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ShardTheme.mutedText)
                 .accessibilityHidden(true)
 
             Text(model.selectedDocument?.collectionName ?? "Results")
@@ -60,7 +60,7 @@ struct QueryResultsView: View {
 
             Label(executionTime(run), systemImage: "clock")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ShardTheme.mutedText)
 
             Spacer(minLength: 8)
 
@@ -72,7 +72,7 @@ struct QueryResultsView: View {
 
             Text(pageRange(run))
                 .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ShardTheme.mutedText)
                 .monospacedDigit()
 
             Button(action: showPreviousPage) {
@@ -221,7 +221,7 @@ private struct BSONOutlineTable: View {
     private func columnHeader(_ title: String, width: CGFloat) -> some View {
         Text(title)
             .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(ShardTheme.mutedText)
             .padding(.horizontal, 7)
             .frame(width: width, alignment: .leading)
     }
@@ -353,7 +353,7 @@ private struct BSONOutlineRow: View {
     private var typeCell: some View {
         Text(node.type)
             .font(.system(size: 12))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(ShardTheme.mutedText)
             .lineLimit(1)
             .padding(.horizontal, 7)
             .frame(width: typeColumnWidth, alignment: .leading)

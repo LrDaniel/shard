@@ -135,6 +135,7 @@ final class AppModel: ObservableObject {
     @Published var isLoadingCollectionHistory = false
     @Published var explainPresentation: ExplainPresentation?
     @Published var isExplaining = false
+    @Published var connectionImportReport: String?
     @Published var lastError: String?
 
     private let persistence: PersistenceStore?
@@ -524,6 +525,17 @@ final class AppModel: ObservableObject {
         )
     }
 
+    func renameFavorite(_ favorite: FavoriteQuery, to proposedTitle: String) {
+        let title = proposedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty,
+              let index = favoriteQueries.firstIndex(where: { $0.id == favorite.id })
+        else {
+            return
+        }
+        favoriteQueries[index].title = title
+        persistFavoriteQueries()
+    }
+
     func clearFavoriteQueries() {
         favoriteQueries.removeAll()
         Task {
@@ -546,9 +558,8 @@ final class AppModel: ObservableObject {
     }
 
     func isFavorite(script: String, database: String) -> Bool {
-        favoriteQueries.contains {
-            $0.script == script && $0.database == database
-        }
+        let identity = QueryIdentity(script: script, database: database)
+        return favoriteQueries.contains { $0.queryIdentity == identity }
     }
 
     func openQueryFile() {
@@ -666,6 +677,80 @@ final class AppModel: ObservableObject {
         selectedConnectionID = saved.id
         showingConnectionEditor = false
         persistConnections()
+    }
+
+    func importConnections() {
+        let importer = ConnectionImportService()
+        let configurationURL: URL
+        if let discovered = importer.discoverConfiguration() {
+            configurationURL = discovered
+        } else {
+            let panel = NSOpenPanel()
+            panel.title = "Import Connections"
+            panel.message = "Select a JSON connection configuration. Press ⌘⇧. to show hidden folders."
+            panel.prompt = "Import"
+            panel.canChooseDirectories = false
+            panel.allowsMultipleSelection = false
+            panel.allowedContentTypes = [.json]
+            guard panel.runModal() == .OK, let selectedURL = panel.url else {
+                return
+            }
+            configurationURL = selectedURL
+        }
+
+        do {
+            let result = try importer.importConnections(from: configurationURL)
+            var importedCount = 0
+            var duplicateCount = 0
+            var warnings = result.warnings
+
+            for imported in result.connections {
+                guard !connections.contains(where: {
+                    connectionMatches($0, imported.profile)
+                }) else {
+                    duplicateCount += 1
+                    continue
+                }
+
+                var profile = imported.profile
+                do {
+                    profile.secretReference = try storeImportedSecret(
+                        imported.secrets.mongodbPassword,
+                        reference: "connection.\(profile.id.uuidString).password"
+                    )
+                    profile.ssh.passwordSecretReference = try storeImportedSecret(
+                        imported.secrets.sshPassword,
+                        reference: "connection.\(profile.id.uuidString).ssh-password"
+                    )
+                    profile.ssh.privateKeyPassphraseReference = try storeImportedSecret(
+                        imported.secrets.sshPrivateKeyPassphrase,
+                        reference: "connection.\(profile.id.uuidString).ssh-key-passphrase"
+                    )
+                    profile.tls.certificatePassphraseReference = try storeImportedSecret(
+                        imported.secrets.tlsCertificatePassphrase,
+                        reference: "connection.\(profile.id.uuidString).tls-passphrase"
+                    )
+                } catch {
+                    warnings.append(
+                        "\(profile.name): one or more secrets could not be stored in Keychain."
+                    )
+                }
+                connections.append(profile)
+                selectedConnectionID = profile.id
+                importedCount += 1
+            }
+
+            if importedCount > 0 {
+                persistConnections()
+            }
+            connectionImportReport = importReport(
+                importedCount: importedCount,
+                duplicateCount: duplicateCount,
+                warnings: warnings
+            )
+        } catch {
+            connectionImportReport = error.localizedDescription
+        }
     }
 
     func testConnection(
@@ -1321,7 +1406,9 @@ final class AppModel: ObservableObject {
             do {
                 let run = try await session.execute(document: document)
                 activeRun = run
-                queryHistory.removeAll { $0.id == run.id }
+                queryHistory.removeAll {
+                    $0.queryIdentity == run.queryIdentity
+                }
                 queryHistory.insert(run, at: 0)
                 let maximumEntries = maximumHistoryEntries
                 if queryHistory.count > maximumEntries {
@@ -1428,6 +1515,54 @@ final class AppModel: ObservableObject {
         Task {
             try? await persistence?.saveConnections(value)
         }
+    }
+
+    private func storeImportedSecret(
+        _ value: String?,
+        reference: String
+    ) throws -> String? {
+        guard let value, !value.isEmpty else { return nil }
+        try secrets.set(value, for: reference)
+        return reference
+    }
+
+    private func connectionMatches(
+        _ lhs: ConnectionProfile,
+        _ rhs: ConnectionProfile
+    ) -> Bool {
+        lhs.host.localizedCaseInsensitiveCompare(rhs.host) == .orderedSame
+            && lhs.port == rhs.port
+            && lhs.username == rhs.username
+            && lhs.authenticationDatabase == rhs.authenticationDatabase
+            && lhs.authentication == rhs.authentication
+            && lhs.replicaSet == rhs.replicaSet
+            && lhs.ssh.enabled == rhs.ssh.enabled
+            && lhs.ssh.host.localizedCaseInsensitiveCompare(rhs.ssh.host) == .orderedSame
+            && lhs.ssh.port == rhs.ssh.port
+    }
+
+    private func importReport(
+        importedCount: Int,
+        duplicateCount: Int,
+        warnings: [String]
+    ) -> String {
+        var lines = [
+            "\(importedCount) connection\(importedCount == 1 ? "" : "s") imported."
+        ]
+        if duplicateCount > 0 {
+            lines.append(
+                "\(duplicateCount) duplicate\(duplicateCount == 1 ? "" : "s") skipped."
+            )
+        }
+        if !warnings.isEmpty {
+            lines.append("")
+            lines.append("Review needed:")
+            lines.append(contentsOf: warnings.prefix(8).map { "• \($0)" })
+            if warnings.count > 8 {
+                lines.append("• \(warnings.count - 8) more warning(s)")
+            }
+        }
+        return lines.joined(separator: "\n")
     }
 
     private var maximumHistoryEntries: Int {
@@ -1731,10 +1866,9 @@ final class AppModel: ObservableObject {
         database: String,
         collection: String?
     ) {
-        if let index = favoriteQueries.firstIndex(where: {
-            $0.script == script && $0.database == database
-        }) {
-            favoriteQueries.remove(at: index)
+        let identity = QueryIdentity(script: script, database: database)
+        if favoriteQueries.contains(where: { $0.queryIdentity == identity }) {
+            favoriteQueries.removeAll { $0.queryIdentity == identity }
         } else {
             favoriteQueries.insert(
                 FavoriteQuery(
@@ -1746,6 +1880,10 @@ final class AppModel: ObservableObject {
                 at: 0
             )
         }
+        persistFavoriteQueries()
+    }
+
+    private func persistFavoriteQueries() {
         let value = favoriteQueries
         Task {
             try? await persistence?.saveFavoriteQueries(value)

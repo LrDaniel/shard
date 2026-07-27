@@ -11,6 +11,8 @@ struct DatabaseSidebarView: View {
     @State private var savedQueriesExpanded = false
     @State private var showingClearRecentsConfirmation = false
     @State private var showingClearSavedQueriesConfirmation = false
+    @State private var favoriteRenameTarget: FavoriteQuery?
+    @State private var favoriteRenameText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,6 +39,30 @@ struct DatabaseSidebarView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This removes every starred query from Shard.")
+        }
+        .alert(
+            "Rename Saved Query",
+            isPresented: Binding(
+                get: { favoriteRenameTarget != nil },
+                set: { if !$0 { favoriteRenameTarget = nil } }
+            )
+        ) {
+            TextField("Query name", text: $favoriteRenameText)
+            Button("Cancel", role: .cancel) {
+                favoriteRenameTarget = nil
+            }
+            Button("Rename") {
+                guard let favorite = favoriteRenameTarget else { return }
+                model.renameFavorite(favorite, to: favoriteRenameText)
+                favoriteRenameTarget = nil
+            }
+            .disabled(
+                favoriteRenameText
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .isEmpty
+            )
+        } message: {
+            Text("Choose a memorable name for this query.")
         }
     }
 
@@ -66,6 +92,7 @@ struct DatabaseSidebarView: View {
                 .listStyle(.plain)
                 .controlSize(.small)
                 .environment(\.defaultMinListRowHeight, 23)
+                .shardSidebarListBackground()
                 .background(sidebarBackground)
                 .accessibilityLabel("Database explorer")
             }
@@ -104,6 +131,7 @@ struct DatabaseSidebarView: View {
                         ),
                         open: { model.openHistoryRun(run) },
                         toggleFavorite: { model.toggleFavorite(run: run) },
+                        rename: nil,
                         remove: { model.removeHistoryRun(run) },
                         clearAll: {
                             showingClearRecentsConfirmation = true
@@ -136,6 +164,10 @@ struct DatabaseSidebarView: View {
                         open: { model.openFavoriteQuery(favorite) },
                         toggleFavorite: {
                             model.toggleFavorite(favorite)
+                        },
+                        rename: {
+                            favoriteRenameText = favorite.title
+                            favoriteRenameTarget = favorite
                         },
                         remove: nil,
                         clearAll: {
@@ -211,16 +243,16 @@ struct DatabaseSidebarView: View {
         HStack(spacing: 6) {
             Label(title.uppercased(), systemImage: systemImage)
             Text(count.formatted())
-                .foregroundStyle(.quaternary)
+                .foregroundStyle(ShardTheme.subtleText)
             Spacer(minLength: 4)
             if count > 5 {
                 Button(isExpanded ? "Less" : "All", action: toggleExpanded)
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ShardTheme.mutedText)
             }
         }
         .font(.caption2.weight(.semibold))
-        .foregroundStyle(.tertiary)
+        .foregroundStyle(ShardTheme.subtleText)
         .padding(.top, 5)
         .contextMenu {
             Button("Clear All", role: .destructive, action: clearAll)
@@ -236,7 +268,7 @@ struct DatabaseSidebarView: View {
 
             Text(model.connectionState.label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ShardTheme.mutedText)
                 .lineLimit(1)
 
             Spacer(minLength: 4)
@@ -275,7 +307,7 @@ struct DatabaseSidebarView: View {
     ) -> some View {
         Label(title.uppercased(), systemImage: systemImage)
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(ShardTheme.subtleText)
             .padding(.top, 5)
     }
 
@@ -317,12 +349,12 @@ struct DatabaseSidebarView: View {
         VStack(spacing: 8) {
             Image(systemName: systemImage)
                 .font(.title2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(ShardTheme.subtleText)
             Text(title)
                 .font(.subheadline.weight(.medium))
             Text(detail)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ShardTheme.mutedText)
                 .multilineTextAlignment(.center)
         }
         .padding(20)
@@ -384,7 +416,7 @@ private struct ExplorerTreeNode: View {
                     Text(count, format: .number)
                         .font(.caption2)
                         .monospacedDigit()
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(ShardTheme.subtleText)
                 }
             }
             .padding(.horizontal, 4)
@@ -434,13 +466,9 @@ private struct ExplorerTreeNode: View {
 
     private var rowBackground: Color {
         if isSelected {
-            let opacity: Double
-            if contrast == .increased {
-                opacity = 0.32
-            } else {
-                opacity = colorScheme == .light ? 0.13 : 0.2
-            }
-            return ShardTheme.selection.opacity(opacity + 0.34)
+            return ShardTheme.selection.opacity(
+                contrast == .increased ? 1 : (colorScheme == .light ? 0.82 : 0.72)
+            )
         }
         if isHovered {
             return Color.primary.opacity(contrast == .increased ? 0.1 : 0.045)
@@ -453,7 +481,7 @@ private struct ExplorerTreeNode: View {
         case .database:
             return .secondary
         case .collection:
-            return isSelected ? Color(nsColor: .selectedControlTextColor) : .secondary
+            return isSelected ? Color.accentColor : ShardTheme.mutedText
         case .category, .connection:
             return .secondary
         }
@@ -547,6 +575,7 @@ private struct SidebarQueryShortcutRow: View {
     let isFavorite: Bool
     let open: () -> Void
     let toggleFavorite: () -> Void
+    let rename: (() -> Void)?
     let remove: (() -> Void)?
     let clearAll: () -> Void
 
@@ -556,7 +585,9 @@ private struct SidebarQueryShortcutRow: View {
                 HStack(spacing: 7) {
                     Image(systemName: systemImage)
                         .font(.system(size: 11))
-                        .foregroundStyle(isFavorite ? .yellow : .secondary)
+                        .foregroundStyle(
+                            isFavorite ? ShardTheme.favorite : ShardTheme.mutedText
+                        )
                         .frame(width: 14)
 
                     VStack(alignment: .leading, spacing: 1) {
@@ -565,7 +596,7 @@ private struct SidebarQueryShortcutRow: View {
                             .lineLimit(1)
                         Text(detail)
                             .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(ShardTheme.subtleText)
                             .lineLimit(1)
                     }
 
@@ -580,7 +611,7 @@ private struct SidebarQueryShortcutRow: View {
             Button(action: toggleFavorite) {
                 Image(systemName: isFavorite ? "star.fill" : "star")
                     .font(.system(size: 10))
-                    .foregroundStyle(isFavorite ? Color.yellow : Color.gray)
+                    .foregroundStyle(isFavorite ? ShardTheme.favorite : Color.gray)
             }
             .buttonStyle(.borderless)
             .opacity(isHovered || isFavorite ? 1 : 0.55)
@@ -598,6 +629,9 @@ private struct SidebarQueryShortcutRow: View {
         .onHover { isHovered = $0 }
         .contextMenu {
             Button("Open", action: open)
+            if let rename {
+                Button("Rename…", action: rename)
+            }
             Button(
                 isFavorite ? "Remove Saved Query" : "Save Query",
                 action: toggleFavorite
@@ -633,7 +667,7 @@ private struct SidebarSavedViewRow: View {
                         .lineLimit(1)
                     Text("\(view.location.database).\(view.location.collection)")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(ShardTheme.subtleText)
                         .lineLimit(1)
                 }
 
@@ -659,6 +693,17 @@ private struct SidebarSavedViewRow: View {
             Button("Open and Run", action: open)
             Divider()
             Button("Remove Saved View", role: .destructive, action: remove)
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func shardSidebarListBackground() -> some View {
+        if #available(macOS 13.0, *) {
+            scrollContentBackground(.hidden)
+        } else {
+            self
         }
     }
 }

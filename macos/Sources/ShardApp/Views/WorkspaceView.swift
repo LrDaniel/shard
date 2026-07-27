@@ -5,10 +5,63 @@ import ShardCore
 import SwiftUI
 
 enum ShardTheme {
-    static let canvas = Color(nsColor: .windowBackgroundColor)
-    static let sidebar = Color(nsColor: .underPageBackgroundColor)
-    static let raised = Color(nsColor: .controlBackgroundColor)
-    static let selection = Color.accentColor
+    static let canvas = adaptive(
+        "Canvas",
+        light: NSColor(srgbRed: 0.953, green: 0.957, blue: 0.965, alpha: 1),
+        dark: .windowBackgroundColor
+    )
+    static let sidebar = adaptive(
+        "Sidebar",
+        light: NSColor(srgbRed: 0.902, green: 0.914, blue: 0.929, alpha: 1),
+        dark: .underPageBackgroundColor
+    )
+    static let raised = adaptive(
+        "Raised",
+        light: NSColor(srgbRed: 0.875, green: 0.890, blue: 0.910, alpha: 1),
+        dark: .controlBackgroundColor
+    )
+    static let selection = adaptive(
+        "Selection",
+        light: NSColor(srgbRed: 0.765, green: 0.824, blue: 0.898, alpha: 1),
+        dark: NSColor(srgbRed: 0.145, green: 0.255, blue: 0.376, alpha: 1)
+    )
+    static let mutedText = adaptive(
+        "MutedText",
+        light: NSColor(srgbRed: 0.275, green: 0.306, blue: 0.345, alpha: 1),
+        dark: .secondaryLabelColor
+    )
+    static let subtleText = adaptive(
+        "SubtleText",
+        light: NSColor(srgbRed: 0.390, green: 0.425, blue: 0.465, alpha: 1),
+        dark: .tertiaryLabelColor
+    )
+    static let separator = adaptive(
+        "Separator",
+        light: NSColor(srgbRed: 0.716, green: 0.737, blue: 0.765, alpha: 1),
+        dark: .separatorColor
+    )
+    static let favorite = adaptive(
+        "Favorite",
+        light: NSColor(srgbRed: 0.110, green: 0.365, blue: 0.650, alpha: 1),
+        dark: NSColor(srgbRed: 0.330, green: 0.650, blue: 1.000, alpha: 1)
+    )
+
+    private static func adaptive(
+        _ name: String,
+        light: NSColor,
+        dark: NSColor
+    ) -> Color {
+        Color(
+            nsColor: NSColor(
+                name: NSColor.Name("Shard.\(name)"),
+                dynamicProvider: { appearance in
+                    appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                        ? dark
+                        : light
+                }
+            )
+        )
+    }
 }
 
 struct WorkspaceView: View {

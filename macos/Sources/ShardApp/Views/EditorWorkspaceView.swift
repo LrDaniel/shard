@@ -96,7 +96,7 @@ private struct QueryTab: View {
         }
         .padding(.horizontal, 8)
         .frame(height: 26)
-        .background(selected ? ShardTheme.selection.opacity(0.72) : .clear)
+        .background(selected ? ShardTheme.selection : .clear)
         .clipShape(.rect(cornerRadius: 5))
         .background(MiddleClickMonitor(action: close))
         .contextMenu {
@@ -229,7 +229,7 @@ private struct QueryEditorView: View {
                         model.isFavorite(
                             script: document.script,
                             database: document.database
-                        ) ? Color.yellow : Color.gray
+                        ) ? ShardTheme.favorite : Color.gray
                     )
                 }
                 .buttonStyle(.borderless)
@@ -237,7 +237,7 @@ private struct QueryEditorView: View {
                 .accessibilityLabel("Toggle favorite query")
                 Text(document.isDirty ? "Edited" : "Saved")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(ShardTheme.subtleText)
             }
             .padding(.horizontal, 10)
             .frame(height: 24)

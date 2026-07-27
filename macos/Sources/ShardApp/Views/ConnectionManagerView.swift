@@ -32,6 +32,19 @@ struct ConnectionManagerView: View {
         } message: {
             Text("The selected connection and its stored secrets will be removed.")
         }
+        .alert(
+            "Connection Import",
+            isPresented: Binding(
+                get: { model.connectionImportReport != nil },
+                set: { if !$0 { model.connectionImportReport = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                model.connectionImportReport = nil
+            }
+        } message: {
+            Text(model.connectionImportReport ?? "")
+        }
     }
 
     private var header: some View {
@@ -127,6 +140,13 @@ struct ConnectionManagerView: View {
                 showingDeleteConfirmation = true
             }
             .disabled(model.selectedConnection == nil)
+
+            Divider()
+                .frame(height: 18)
+
+            Button(action: model.importConnections) {
+                Label("Import Connections…", systemImage: "square.and.arrow.down")
+            }
 
             Spacer()
 

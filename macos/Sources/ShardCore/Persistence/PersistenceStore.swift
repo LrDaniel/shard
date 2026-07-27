@@ -89,6 +89,10 @@ public actor PersistenceStore {
     }
 
     public func appendHistory(_ run: QueryRun, maximumEntries: Int = 1_000) throws {
+        for id in try historyRunIDs(matching: run.queryIdentity) where id != run.id {
+            try removeHistoryRun(id: id)
+        }
+
         let data: Data
         do {
             data = try encoder.encode(run)
@@ -123,25 +127,42 @@ public actor PersistenceStore {
     }
 
     public func loadHistory(limit: Int = 100) throws -> [QueryRun] {
-        let sql = "SELECT payload FROM query_history ORDER BY started_at DESC LIMIT ?;"
+        let sql = "SELECT id, payload FROM query_history ORDER BY started_at DESC;"
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else {
             throw StoreError.execute(lastError)
         }
-        defer { sqlite3_finalize(statement) }
-        sqlite3_bind_int(statement, 1, Int32(max(1, limit)))
 
         var runs: [QueryRun] = []
+        var identities = Set<QueryIdentity>()
+        var duplicateIDs: [UUID] = []
         while sqlite3_step(statement) == SQLITE_ROW {
             guard
-                let bytes = sqlite3_column_blob(statement, 0)
+                let idBytes = sqlite3_column_text(statement, 0),
+                let id = UUID(uuidString: String(cString: idBytes)),
+                let bytes = sqlite3_column_blob(statement, 1)
             else { continue }
-            let count = Int(sqlite3_column_bytes(statement, 0))
+            let count = Int(sqlite3_column_bytes(statement, 1))
             do {
-                runs.append(try decoder.decode(QueryRun.self, from: Data(bytes: bytes, count: count)))
+                let run = try decoder.decode(
+                    QueryRun.self,
+                    from: Data(bytes: bytes, count: count)
+                )
+                if identities.insert(run.queryIdentity).inserted {
+                    if runs.count < max(1, limit) {
+                        runs.append(run)
+                    }
+                } else {
+                    duplicateIDs.append(id)
+                }
             } catch {
+                sqlite3_finalize(statement)
                 throw StoreError.decode(error.localizedDescription)
             }
+        }
+        sqlite3_finalize(statement)
+        for id in duplicateIDs {
+            try removeHistoryRun(id: id)
         }
         return runs
     }
@@ -271,11 +292,19 @@ public actor PersistenceStore {
     }
 
     public func saveFavoriteQueries(_ favorites: [FavoriteQuery]) throws {
-        try save(key: "query.favorites", value: favorites)
+        try save(
+            key: "query.favorites",
+            value: Self.deduplicatedFavorites(favorites)
+        )
     }
 
     public func loadFavoriteQueries() throws -> [FavoriteQuery] {
-        try load(key: "query.favorites") ?? []
+        let stored: [FavoriteQuery] = try load(key: "query.favorites") ?? []
+        let favorites = Self.deduplicatedFavorites(stored)
+        if favorites != stored {
+            try saveFavoriteQueries(favorites)
+        }
+        return favorites
     }
 
     public func saveCollectionViews(
@@ -371,6 +400,47 @@ public actor PersistenceStore {
             return try decoder.decode(Value.self, from: data)
         } catch {
             throw StoreError.decode(error.localizedDescription)
+        }
+    }
+
+    private func historyRunIDs(
+        matching identity: QueryIdentity
+    ) throws -> [UUID] {
+        let sql = "SELECT id, payload FROM query_history;"
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw StoreError.execute(lastError)
+        }
+        defer { sqlite3_finalize(statement) }
+
+        var ids: [UUID] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard
+                let idBytes = sqlite3_column_text(statement, 0),
+                let id = UUID(uuidString: String(cString: idBytes)),
+                let bytes = sqlite3_column_blob(statement, 1)
+            else { continue }
+            let data = Data(
+                bytes: bytes,
+                count: Int(sqlite3_column_bytes(statement, 1))
+            )
+            do {
+                if try decoder.decode(QueryRun.self, from: data).queryIdentity == identity {
+                    ids.append(id)
+                }
+            } catch {
+                throw StoreError.decode(error.localizedDescription)
+            }
+        }
+        return ids
+    }
+
+    private static func deduplicatedFavorites(
+        _ favorites: [FavoriteQuery]
+    ) -> [FavoriteQuery] {
+        var identities = Set<QueryIdentity>()
+        return favorites.filter {
+            identities.insert($0.queryIdentity).inserted
         }
     }
 

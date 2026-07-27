@@ -41,7 +41,22 @@ func persistenceRoundTripsWorkspaceAndHistory() async throws {
 
     let history = try await store.loadHistory()
     #expect(history == [run])
+
+    let newerDuplicate = QueryRun(
+        documentID: UUID(),
+        script: "\n\(document.script)\n",
+        database: document.database,
+        startedAt: Date(timeIntervalSince1970: 1_700_000_001),
+        elapsedMilliseconds: 21,
+        result: .array([.object(["ok": .number(2)])]),
+        resultCount: 1
+    )
+    try await store.appendHistory(newerDuplicate)
+    #expect(try await store.loadHistory() == [newerDuplicate])
+
     try await store.removeHistoryRun(id: run.id)
+    #expect(try await store.loadHistory() == [newerDuplicate])
+    try await store.removeHistoryRun(id: newerDuplicate.id)
     #expect(try await store.loadHistory().isEmpty)
     try await store.appendHistory(run)
     try await store.clearHistory()
@@ -120,6 +135,15 @@ func persistenceRoundTripsWorkspaceAndHistory() async throws {
     )
     try await store.saveFavoriteQueries([favorite])
     #expect(try await store.loadFavoriteQueries() == [favorite])
+
+    let renamedDuplicate = FavoriteQuery(
+        title: "Renamed duplicate",
+        script: "\n\(favorite.script)\n",
+        database: favorite.database,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_101)
+    )
+    try await store.saveFavoriteQueries([renamedDuplicate, favorite])
+    #expect(try await store.loadFavoriteQueries() == [renamedDuplicate])
 
     let location = CollectionLocation(
         connectionID: connectionID,
@@ -220,6 +244,69 @@ func connectionProfilesDecodeBeforeSSHAuthenticationWasAdded() throws {
     #expect(decoded.ssh.authentication == nil)
     #expect(decoded.effectiveEnvironment == .development)
     #expect(!decoded.isReadOnly)
+}
+
+@Test
+func connectionImportMapsAuthenticationSSHAndTLS() throws {
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(
+        at: directory,
+        withIntermediateDirectories: true
+    )
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    let configuration = directory.appendingPathComponent("connections.json")
+    let fixture: [String: Any] = [
+        "connections": [
+            [
+                "connectionName": "Imported Stage",
+                "serverHost": "db.example.test",
+                "serverPort": 27_018,
+                "defaultDatabase": "catalog",
+                "credentials": [
+                    [
+                        "enabled": true,
+                        "userName": "reader",
+                        "userPassword": "local-fixture-password",
+                        "databaseName": "admin",
+                        "mechanism": "SCRAM-SHA-256"
+                    ]
+                ],
+                "ssh": [
+                    "enabled": true,
+                    "host": "bastion.example.test",
+                    "port": 22,
+                    "userName": "deploy",
+                    "method": "password",
+                    "userPassword": "local-fixture-ssh-password"
+                ],
+                "ssl": [
+                    "sslEnabled": true,
+                    "allowInvalidCertificates": false,
+                    "allowInvalidHostnames": false
+                ]
+            ]
+        ]
+    ]
+    try JSONSerialization.data(
+        withJSONObject: fixture,
+        options: [.prettyPrinted]
+    ).write(to: configuration)
+
+    let result = try ConnectionImportService().importConnections(
+        from: configuration
+    )
+    let imported = try #require(result.connections.first)
+    #expect(imported.profile.name == "Imported Stage")
+    #expect(imported.profile.host == "db.example.test")
+    #expect(imported.profile.port == 27_018)
+    #expect(imported.profile.authentication == .scramSHA256)
+    #expect(imported.profile.ssh.enabled)
+    #expect(imported.profile.ssh.authentication == .password)
+    #expect(imported.profile.tls.enabled)
+    #expect(imported.secrets.mongodbPassword == "local-fixture-password")
+    #expect(imported.secrets.sshPassword == "local-fixture-ssh-password")
 }
 
 @Test

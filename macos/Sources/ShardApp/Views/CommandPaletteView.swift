@@ -226,7 +226,9 @@ struct QueryHistoryView: View {
 
             Button(action: toggleFavorite) {
                 Image(systemName: isFavorite ? "star.fill" : "star")
-                    .foregroundStyle(isFavorite ? .yellow : .secondary)
+                    .foregroundStyle(
+                        isFavorite ? ShardTheme.favorite : ShardTheme.mutedText
+                    )
             }
             .buttonStyle(.borderless)
             .accessibilityLabel(isFavorite ? "Remove favorite" : "Add favorite")
