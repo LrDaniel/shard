@@ -27,11 +27,6 @@ struct ShardApp: App {
                     model.showingConnectionEditor = true
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
-                Divider()
-                Button("Connection Manager…") {
-                    model.showingConnectionManager = true
-                }
-                .keyboardShortcut("m", modifiers: [.command, .shift])
                 Button("Quick Open Collection…", action: model.showCollectionQuickOpen)
                     .keyboardShortcut("o", modifiers: [.command, .shift])
             }
@@ -71,6 +66,36 @@ struct ShardApp: App {
                     model.showingCommandPalette = true
                 }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
+            }
+
+            CommandMenu("Connections") {
+                ForEach(
+                    Array(model.connections.prefix(9).enumerated()),
+                    id: \.element.id
+                ) { index, connection in
+                    Button(connection.name) {
+                        model.switchConnection(to: connection.id)
+                    }
+                    .keyboardShortcut(
+                        KeyEquivalent(Character(String(index + 1))),
+                        modifiers: .command
+                    )
+                }
+
+                if !model.connections.isEmpty {
+                    Divider()
+                }
+
+                if model.connectionState.isConnected ||
+                    model.connectionState == .connecting {
+                    Button("Disconnect", action: model.disconnect)
+                    Divider()
+                }
+
+                Button("Manage Connections…") {
+                    model.showingConnectionManager = true
+                }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
             }
 
             CommandGroup(after: .sidebar) {

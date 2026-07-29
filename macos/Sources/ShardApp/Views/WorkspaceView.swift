@@ -89,6 +89,14 @@ struct WorkspaceView: View {
                     guard model.selectedDocument != nil else { return false }
                     model.closeSelectedQuery()
                     return true
+                },
+                runQuery: {
+                    guard model.connectionState.isConnected,
+                          !model.isExecuting else {
+                        return false
+                    }
+                    model.executeSelectedQuery()
+                    return true
                 }
             )
         )
@@ -197,6 +205,7 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
 private struct WorkspaceTabKeyboardMonitor: NSViewRepresentable {
     let newTab: () -> Void
     let closeTab: () -> Bool
+    let runQuery: () -> Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -244,6 +253,8 @@ private struct WorkspaceTabKeyboardMonitor: NSViewRepresentable {
                     return nil
                 case 13:
                     return parent.closeTab() ? nil : event
+                case 36, 76:
+                    return parent.runQuery() ? nil : event
                 default:
                     return event
                 }
@@ -261,6 +272,8 @@ private struct WorkspaceTabKeyboardMonitor: NSViewRepresentable {
 
 private struct WorkspaceToolbar: ToolbarContent {
     @EnvironmentObject private var model: AppModel
+    @AppStorage("connectionSwitcher.location")
+    private var connectionSwitcherLocation = ConnectionSwitcherLocation.sidebar.rawValue
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
@@ -269,68 +282,66 @@ private struct WorkspaceToolbar: ToolbarContent {
             }
             .help(model.sidebarVisible ? "Hide database sidebar" : "Show database sidebar")
 
-            Menu {
-                if model.connections.isEmpty {
-                    Button("No Saved Connections") {}
-                        .disabled(true)
-                } else {
-                    ForEach(connectionGroups) { group in
-                        Section(group.title) {
-                            ForEach(group.connections) { connection in
-                                Button {
-                                    model.switchConnection(to: connection.id)
-                                } label: {
-                                    Label(
-                                        connectionMenuTitle(connection),
-                                        systemImage: connection.id == model.currentConnectionID
-                                            ? "checkmark.circle.fill"
-                                            : "server.rack"
-                                    )
-                                }
+            if showsConnectionsInToolbar {
+                Menu {
+                    if model.connections.isEmpty {
+                        Button("No Saved Connections") {}
+                            .disabled(true)
+                    } else {
+                        ForEach(model.connections) { connection in
+                            Button {
+                                model.switchConnection(to: connection.id)
+                            } label: {
+                                Label(
+                                    connection.name,
+                                    systemImage: connection.id == model.currentConnectionID
+                                        ? "checkmark.circle.fill"
+                                        : "server.rack"
+                                )
                             }
                         }
+
+                        Divider()
+
+                        if model.connectionState.isConnected ||
+                            model.connectionState == .connecting {
+                            Button("Disconnect", action: model.disconnect)
+                            Divider()
+                        }
                     }
+
+                    Button("Manage Connections…") {
+                        model.showingConnectionManager = true
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "server.rack")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+
+                        Text(model.currentConnection?.name ?? "No Connection")
+                            .font(.callout.weight(.semibold))
+                            .lineLimit(1)
+
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 5, height: 5)
+                            .accessibilityHidden(true)
+
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    .contentShape(Rectangle())
                 }
-
-                Divider()
-
-                if model.connectionState.isConnected
-                    || model.connectionState == .connecting {
-                    Button("Disconnect", action: model.disconnect)
-                    Divider()
-                }
-
-                Button("Manage Connections…") {
-                    model.showingConnectionManager = true
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "server.rack")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    Text(model.currentConnection?.name ?? "No Connection")
-                        .font(.callout.weight(.semibold))
-                        .lineLimit(1)
-
-                    Circle()
-                        .fill(statusColor)
-                        .frame(width: 5, height: 5)
-                        .accessibilityHidden(true)
-
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityHidden(true)
-                }
-                .fixedSize(horizontal: true, vertical: false)
-                .contentShape(Rectangle())
+                .help("Switch connection — \(model.connectionState.label)")
+                .accessibilityLabel("Current connection")
+                .accessibilityValue(
+                    "\(model.currentConnection?.name ?? "None"), \(model.connectionState.label)"
+                )
             }
-            .help("\(model.currentConnection?.name ?? "No connection") — \(model.connectionState.label)")
-            .accessibilityLabel("Current connection")
-            .accessibilityValue(
-                "\(model.currentConnection?.name ?? "None"), \(model.connectionState.label)"
-            )
 
             Button(action: model.showCollectionQuickOpen) {
                 Label("Find Collection", systemImage: "magnifyingglass")
@@ -348,7 +359,7 @@ private struct WorkspaceToolbar: ToolbarContent {
                 model.isExecuting ||
                 model.isExplaining
             )
-            .help("Run query (⌘R)")
+            .help("Run query (⌘R or ⌘Return)")
 
             Button(action: model.explainSelectedQuery) {
                 Label("Explain", systemImage: "chart.bar.xaxis")
@@ -369,15 +380,8 @@ private struct WorkspaceToolbar: ToolbarContent {
         }
     }
 
-    private var environmentColor: Color {
-        guard let connection = model.currentConnection else {
-            return .secondary
-        }
-        switch connection.effectiveEnvironment {
-        case .development: return .green
-        case .staging: return .orange
-        case .production: return .red
-        }
+    private var showsConnectionsInToolbar: Bool {
+        ConnectionSwitcherLocation(rawValue: connectionSwitcherLocation) == .toolbar
     }
 
     private var statusColor: Color {
@@ -393,37 +397,6 @@ private struct WorkspaceToolbar: ToolbarContent {
         }
     }
 
-    private var connectionGroups: [ConnectionMenuGroup] {
-        ConnectionProfile.Environment.allCases.compactMap { environment in
-            let connections = model.connections.filter {
-                $0.effectiveEnvironment == environment
-            }
-            guard !connections.isEmpty else { return nil }
-            return ConnectionMenuGroup(
-                environment: environment,
-                connections: connections
-            )
-        }
-    }
-
-    private func connectionMenuTitle(_ connection: ConnectionProfile) -> String {
-        "\(connection.name)  ·  \(connection.host):\(connection.port)"
-    }
-}
-
-private struct ConnectionMenuGroup: Identifiable {
-    let environment: ConnectionProfile.Environment
-    let connections: [ConnectionProfile]
-
-    var id: ConnectionProfile.Environment { environment }
-
-    var title: String {
-        switch environment {
-        case .development: return "Development"
-        case .staging: return "Staging"
-        case .production: return "Production"
-        }
-    }
 }
 
 private struct ExplainPlanView: View {

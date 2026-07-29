@@ -176,6 +176,16 @@ final class AppModel: ObservableObject {
         connections.first { $0.id == currentConnectionID }
     }
 
+    var currentQueryHistory: [QueryRun] {
+        guard let connectionID = currentConnectionID else { return [] }
+        return queryHistory.filter { $0.connectionID == connectionID }
+    }
+
+    var currentFavoriteQueries: [FavoriteQuery] {
+        guard let connectionID = currentConnectionID else { return [] }
+        return favoriteQueries.filter { $0.connectionID == connectionID }
+    }
+
     var selectedDocument: QueryDocument? {
         workspace.documents.first { $0.id == workspace.selectedDocumentID }
     }
@@ -486,10 +496,14 @@ final class AppModel: ObservableObject {
     }
 
     func clearQueryHistory() {
-        queryHistory.removeAll()
+        guard let connectionID = currentConnectionID else { return }
+        let removedRuns = queryHistory.filter { $0.connectionID == connectionID }
+        queryHistory.removeAll { $0.connectionID == connectionID }
         Task {
             do {
-                try await persistence?.clearHistory()
+                for run in removedRuns {
+                    try await persistence?.removeHistoryRun(id: run.id)
+                }
             } catch {
                 lastError = error.localizedDescription
             }
@@ -537,14 +551,9 @@ final class AppModel: ObservableObject {
     }
 
     func clearFavoriteQueries() {
-        favoriteQueries.removeAll()
-        Task {
-            do {
-                try await persistence?.saveFavoriteQueries([])
-            } catch {
-                lastError = error.localizedDescription
-            }
-        }
+        guard let connectionID = currentConnectionID else { return }
+        favoriteQueries.removeAll { $0.connectionID == connectionID }
+        persistFavoriteQueries()
     }
 
     func toggleSelectedQueryFavorite() {
@@ -558,7 +567,11 @@ final class AppModel: ObservableObject {
     }
 
     func isFavorite(script: String, database: String) -> Bool {
-        let identity = QueryIdentity(script: script, database: database)
+        let identity = QueryIdentity(
+            script: script,
+            database: database,
+            connectionID: currentConnectionID
+        )
         return favoriteQueries.contains { $0.queryIdentity == identity }
     }
 
@@ -798,7 +811,12 @@ final class AppModel: ObservableObject {
     }
 
     func duplicateSelectedConnection() {
-        guard let source = selectedConnection else { return }
+        guard let id = selectedConnectionID else { return }
+        duplicateConnection(id)
+    }
+
+    func duplicateConnection(_ id: ConnectionProfile.ID) {
+        guard let source = connections.first(where: { $0.id == id }) else { return }
         var copy = ConnectionProfile(
             name: "\(source.name) Copy",
             host: source.host,
@@ -827,12 +845,17 @@ final class AppModel: ObservableObject {
 
     func deleteSelectedConnection() {
         guard let id = selectedConnectionID else { return }
+        deleteConnection(id)
+    }
+
+    func deleteConnection(_ id: ConnectionProfile.ID) {
+        guard let connection = connections.first(where: { $0.id == id }) else { return }
         let removedActiveConnection = workspace.connectionID == id
         let references = [
-            selectedConnection?.secretReference,
-            selectedConnection?.ssh.passwordSecretReference,
-            selectedConnection?.ssh.privateKeyPassphraseReference,
-            selectedConnection?.tls.certificatePassphraseReference
+            connection.secretReference,
+            connection.ssh.passwordSecretReference,
+            connection.ssh.privateKeyPassphraseReference,
+            connection.tls.certificatePassphraseReference
         ].compactMap { $0 }
         for reference in references {
             try? secrets.remove(reference)
@@ -934,6 +957,22 @@ final class AppModel: ObservableObject {
         closeInspectedDocument()
         saveWorkspace()
         connect()
+    }
+
+    func connectionState(for id: ConnectionProfile.ID) -> ConnectionState {
+        switch connectionState {
+        case .connecting, .connected:
+            return id == workspace.connectionID ? connectionState : .disconnected
+        case .failed:
+            return id == selectedConnectionID ? connectionState : .disconnected
+        case .disconnected:
+            return .disconnected
+        }
+    }
+
+    func disconnectConnection(_ id: ConnectionProfile.ID) {
+        guard id == workspace.connectionID else { return }
+        disconnect()
     }
 
     func refreshExplorer() async {
@@ -1398,13 +1437,30 @@ final class AppModel: ObservableObject {
     }
 
     private func execute(_ document: QueryDocument) {
-        guard let session else { return }
+        guard let session, let connectionID = currentConnectionID else { return }
         isExecuting = true
         lastError = nil
 
         Task {
             do {
-                let run = try await session.execute(document: document)
+                let unscopedRun = try await session.execute(document: document)
+                guard currentConnectionID == connectionID else {
+                    isExecuting = false
+                    return
+                }
+                let run = QueryRun(
+                    id: unscopedRun.id,
+                    connectionID: connectionID,
+                    documentID: unscopedRun.documentID,
+                    script: unscopedRun.script,
+                    database: unscopedRun.database,
+                    startedAt: unscopedRun.startedAt,
+                    elapsedMilliseconds: unscopedRun.elapsedMilliseconds,
+                    result: unscopedRun.result,
+                    resultCount: unscopedRun.resultCount,
+                    cursorID: unscopedRun.cursorID,
+                    hasMore: unscopedRun.hasMore
+                )
                 activeRun = run
                 queryHistory.removeAll {
                     $0.queryIdentity == run.queryIdentity
@@ -1466,6 +1522,7 @@ final class AppModel: ObservableObject {
                 }
                 activeRun = QueryRun(
                     id: run.id,
+                    connectionID: run.connectionID,
                     documentID: run.documentID,
                     script: run.script,
                     database: run.database,
@@ -1499,11 +1556,39 @@ final class AppModel: ObservableObject {
                 workspace = savedWorkspace
                 selectedConnectionID = savedWorkspace.connectionID ?? selectedConnectionID
             }
+            let restoredConnectionID = workspace.connectionID ?? selectedConnectionID
             queryHistory = try await persistence.loadHistory(
                 limit: maximumHistoryEntries
-            )
-            favoriteQueries = try await persistence.loadFavoriteQueries()
+            ).map { run in
+                guard run.connectionID == nil else { return run }
+                return QueryRun(
+                    id: run.id,
+                    connectionID: restoredConnectionID,
+                    documentID: run.documentID,
+                    script: run.script,
+                    database: run.database,
+                    startedAt: run.startedAt,
+                    elapsedMilliseconds: run.elapsedMilliseconds,
+                    result: run.result,
+                    resultCount: run.resultCount,
+                    cursorID: run.cursorID,
+                    hasMore: run.hasMore
+                )
+            }
+            favoriteQueries = try await persistence.loadFavoriteQueries().map { favorite in
+                guard favorite.connectionID == nil else { return favorite }
+                var migrated = favorite
+                migrated.connectionID = restoredConnectionID
+                return migrated
+            }
             savedCollectionViews = try await persistence.loadCollectionViews()
+            for run in queryHistory {
+                try await persistence.appendHistory(
+                    run,
+                    maximumEntries: maximumHistoryEntries
+                )
+            }
+            try await persistence.saveFavoriteQueries(favoriteQueries)
             rebuildExplorer(databases: [], collections: [:])
         } catch {
             lastError = error.localizedDescription
@@ -1866,12 +1951,17 @@ final class AppModel: ObservableObject {
         database: String,
         collection: String?
     ) {
-        let identity = QueryIdentity(script: script, database: database)
+        let identity = QueryIdentity(
+            script: script,
+            database: database,
+            connectionID: currentConnectionID
+        )
         if favoriteQueries.contains(where: { $0.queryIdentity == identity }) {
             favoriteQueries.removeAll { $0.queryIdentity == identity }
         } else {
             favoriteQueries.insert(
                 FavoriteQuery(
+                    connectionID: currentConnectionID,
                     title: title,
                     script: script,
                     database: database,

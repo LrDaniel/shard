@@ -250,16 +250,16 @@ struct QueryHistoryView: View {
     }
 
     private var filteredHistory: [QueryRun] {
-        guard !searchText.isEmpty else { return model.queryHistory }
-        return model.queryHistory.filter {
+        guard !searchText.isEmpty else { return model.currentQueryHistory }
+        return model.currentQueryHistory.filter {
             $0.script.localizedCaseInsensitiveContains(searchText)
                 || $0.database.localizedCaseInsensitiveContains(searchText)
         }
     }
 
     private var filteredFavorites: [FavoriteQuery] {
-        guard !searchText.isEmpty else { return model.favoriteQueries }
-        return model.favoriteQueries.filter {
+        guard !searchText.isEmpty else { return model.currentFavoriteQueries }
+        return model.currentFavoriteQueries.filter {
             $0.title.localizedCaseInsensitiveContains(searchText)
                 || $0.script.localizedCaseInsensitiveContains(searchText)
                 || $0.database.localizedCaseInsensitiveContains(searchText)

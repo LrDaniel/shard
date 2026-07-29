@@ -161,6 +161,55 @@ func persistenceRoundTripsWorkspaceAndHistory() async throws {
 }
 
 @Test
+func queryLibraryKeepsMatchingQueriesFromDifferentConnections() async throws {
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    let store = try PersistenceStore(url: directory.appendingPathComponent("test.sqlite"))
+    let firstConnectionID = UUID()
+    let secondConnectionID = UUID()
+    let script = #"db.getCollection("orders").find({})"#
+    let firstRun = QueryRun(
+        connectionID: firstConnectionID,
+        documentID: UUID(),
+        script: script,
+        database: "app",
+        startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+        elapsedMilliseconds: 10,
+        result: .array([])
+    )
+    let secondRun = QueryRun(
+        connectionID: secondConnectionID,
+        documentID: UUID(),
+        script: script,
+        database: "app",
+        startedAt: Date(timeIntervalSince1970: 1_700_000_001),
+        elapsedMilliseconds: 11,
+        result: .array([])
+    )
+
+    try await store.appendHistory(firstRun)
+    try await store.appendHistory(secondRun)
+    #expect(try await store.loadHistory() == [secondRun, firstRun])
+
+    let firstFavorite = FavoriteQuery(
+        connectionID: firstConnectionID,
+        title: "First orders",
+        script: script,
+        database: "app"
+    )
+    let secondFavorite = FavoriteQuery(
+        connectionID: secondConnectionID,
+        title: "Second orders",
+        script: script,
+        database: "app"
+    )
+    try await store.saveFavoriteQueries([firstFavorite, secondFavorite])
+    #expect(try await store.loadFavoriteQueries() == [firstFavorite, secondFavorite])
+}
+
+@Test
 func collectionHistoryDecodesLegacySingleDocumentEntries() throws {
     let id = UUID()
     let connectionID = UUID()

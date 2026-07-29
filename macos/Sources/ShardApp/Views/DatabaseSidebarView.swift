@@ -7,12 +7,16 @@ import SwiftUI
 struct DatabaseSidebarView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var model: AppModel
+    @AppStorage("connectionSwitcher.location")
+    private var connectionSwitcherLocation = ConnectionSwitcherLocation.sidebar.rawValue
     @State private var recentsExpanded = false
     @State private var savedQueriesExpanded = false
     @State private var showingClearRecentsConfirmation = false
     @State private var showingClearSavedQueriesConfirmation = false
     @State private var favoriteRenameTarget: FavoriteQuery?
     @State private var favoriteRenameText = ""
+    @State private var editingConnection: ConnectionProfile?
+    @State private var connectionPendingDeletion: ConnectionProfile?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,13 +25,44 @@ struct DatabaseSidebarView: View {
             sidebarFooter
         }
         .background(sidebarBackground)
+        .sheet(item: $editingConnection) { connection in
+            ConnectionEditorView(profile: connection) { profile, secrets in
+                let shouldReconnect =
+                    model.workspace.connectionID == profile.id &&
+                    model.connectionState.isConnected
+                model.saveConnection(profile, secrets: secrets)
+                if shouldReconnect {
+                    model.disconnect()
+                    model.connect()
+                }
+                editingConnection = nil
+            }
+        }
+        .alert(
+            "Delete Connection?",
+            isPresented: Binding(
+                get: { connectionPendingDeletion != nil },
+                set: { if !$0 { connectionPendingDeletion = nil } }
+            ),
+            presenting: connectionPendingDeletion
+        ) { connection in
+            Button("Delete", role: .destructive) {
+                model.deleteConnection(connection.id)
+                connectionPendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) {
+                connectionPendingDeletion = nil
+            }
+        } message: { connection in
+            Text("“\(connection.name)” and its Keychain references will be removed.")
+        }
         .alert("Clear Recent Queries?", isPresented: $showingClearRecentsConfirmation) {
             Button("Clear Recents", role: .destructive) {
                 model.clearQueryHistory()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This removes all locally stored query history.")
+            Text("This removes recent queries for the selected connection.")
         }
         .alert(
             "Clear Saved Queries?",
@@ -38,7 +73,7 @@ struct DatabaseSidebarView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This removes every starred query from Shard.")
+            Text("This removes saved queries for the selected connection.")
         }
         .alert(
             "Rename Saved Query",
@@ -66,58 +101,114 @@ struct DatabaseSidebarView: View {
         }
     }
 
-    @ViewBuilder
     private var explorerContent: some View {
-        if model.connectionState.isConnected {
-            if model.explorerNodes.isEmpty {
-                sidebarMessage(
-                    systemImage: "cylinder",
-                    title: "No Databases",
-                    detail: "This connection did not return any databases."
-                )
-            } else {
-                List {
-                    shortcutSections
-                    Section {
+        List {
+            if showsConnectionsInSidebar {
+                Section {
+                    ForEach(model.connections) { connection in
+                        SidebarConnectionRow(
+                            connection: connection,
+                            state: model.connectionState(for: connection.id),
+                            isSelected: connection.id == model.currentConnectionID,
+                            select: {
+                                model.switchConnection(to: connection.id)
+                            },
+                            disconnect: {
+                                model.disconnectConnection(connection.id)
+                            },
+                            edit: {
+                                editingConnection = connection
+                            },
+                            duplicate: {
+                                model.duplicateConnection(connection.id)
+                            },
+                            delete: {
+                                connectionPendingDeletion = connection
+                            }
+                        )
+                    }
+                } header: {
+                    connectionSectionHeader
+                }
+            }
+
+            shortcutSections
+
+            Section {
+                if model.connectionState.isConnected {
+                    if model.explorerNodes.isEmpty {
+                        SidebarExplorerStatusRow(
+                            systemImage: "cylinder",
+                            title: "No databases returned"
+                        )
+                    } else {
                         ForEach(model.explorerNodes) { node in
                             ExplorerTreeNode(
                                 node: node,
                                 forceExpanded: false
                             )
                         }
-                    } header: {
-                        sidebarSectionHeader("Databases", systemImage: "cylinder")
                     }
-                }
-                .listStyle(.plain)
-                .controlSize(.small)
-                .environment(\.defaultMinListRowHeight, 23)
-                .shardSidebarListBackground()
-                .background(sidebarBackground)
-                .accessibilityLabel("Database explorer")
-            }
-        } else if model.connectionState == .connecting {
-            VStack(spacing: 10) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Connecting…")
-                    .font(.caption)
+                } else if model.connectionState == .connecting {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.mini)
+                        Text("Loading databases…")
+                    }
                     .foregroundStyle(.secondary)
+                } else {
+                    SidebarExplorerStatusRow(
+                        systemImage: "bolt.slash",
+                        title: model.connections.isEmpty
+                            ? "Create a connection to begin"
+                            : "Select a connection"
+                    )
+                }
+            } header: {
+                sidebarSectionHeader("Databases", systemImage: "cylinder")
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityLabel("Connecting to MongoDB")
-        } else {
-            sidebarMessage(
-                systemImage: "externaldrive.badge.questionmark",
-                title: "No Connection",
-                detail: "Choose a connection above."
-            )
         }
+        .listStyle(.plain)
+        .controlSize(.small)
+        .environment(\.defaultMinListRowHeight, 23)
+        .shardSidebarListBackground()
+        .background(sidebarBackground)
+        .accessibilityLabel("Connections and database explorer")
+    }
+
+    private var showsConnectionsInSidebar: Bool {
+        ConnectionSwitcherLocation(rawValue: connectionSwitcherLocation) != .toolbar
+    }
+
+    private var connectionSectionHeader: some View {
+        HStack(spacing: 6) {
+            Label("CONNECTIONS", systemImage: "server.rack")
+            Spacer(minLength: 4)
+            Button {
+                model.showingConnectionEditor = true
+            } label: {
+                Image(systemName: "plus")
+            }
+            .buttonStyle(.plain)
+            .help("New connection")
+
+            Button {
+                model.showingConnectionManager = true
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+            .buttonStyle(.plain)
+            .help("Manage connections")
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(ShardTheme.mutedText)
+        .padding(.vertical, 2)
+        .textCase(nil)
     }
 
     @ViewBuilder
     private var shortcutSections: some View {
-        if !model.queryHistory.isEmpty {
+        if !model.currentQueryHistory.isEmpty {
             Section {
                 ForEach(visibleRecentQueries) { run in
                     SidebarQueryShortcutRow(
@@ -142,7 +233,7 @@ struct DatabaseSidebarView: View {
                 querySectionHeader(
                     "Recents",
                     systemImage: "clock",
-                    count: model.queryHistory.count,
+                    count: model.currentQueryHistory.count,
                     isExpanded: recentsExpanded,
                     toggleExpanded: { recentsExpanded.toggle() },
                     clearAll: {
@@ -152,7 +243,7 @@ struct DatabaseSidebarView: View {
             }
         }
 
-        if !model.favoriteQueries.isEmpty {
+        if !model.currentFavoriteQueries.isEmpty {
             Section {
                 ForEach(visibleSavedQueries) { favorite in
                     SidebarQueryShortcutRow(
@@ -179,7 +270,7 @@ struct DatabaseSidebarView: View {
                 querySectionHeader(
                     "Saved Queries",
                     systemImage: "star.fill",
-                    count: model.favoriteQueries.count,
+                    count: model.currentFavoriteQueries.count,
                     isExpanded: savedQueriesExpanded,
                     toggleExpanded: { savedQueriesExpanded.toggle() },
                     clearAll: {
@@ -209,14 +300,14 @@ struct DatabaseSidebarView: View {
 
     private var visibleRecentQueries: [QueryRun] {
         recentsExpanded
-            ? model.queryHistory
-            : Array(model.queryHistory.prefix(5))
+            ? model.currentQueryHistory
+            : Array(model.currentQueryHistory.prefix(5))
     }
 
     private var visibleSavedQueries: [FavoriteQuery] {
         savedQueriesExpanded
-            ? model.favoriteQueries
-            : Array(model.favoriteQueries.prefix(5))
+            ? model.currentFavoriteQueries
+            : Array(model.currentFavoriteQueries.prefix(5))
     }
 
     private func queryTitle(_ script: String) -> String {
@@ -341,24 +432,137 @@ struct DatabaseSidebarView: View {
         }
     }
 
-    private func sidebarMessage(
-        systemImage: String,
-        title: String,
-        detail: String
-    ) -> some View {
-        VStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.title2)
-                .foregroundStyle(ShardTheme.subtleText)
-            Text(title)
-                .font(.subheadline.weight(.medium))
-            Text(detail)
-                .font(.caption)
-                .foregroundStyle(ShardTheme.mutedText)
-                .multilineTextAlignment(.center)
+}
+
+private struct SidebarConnectionRow: View {
+    let connection: ConnectionProfile
+    let state: AppModel.ConnectionState
+    let isSelected: Bool
+    let select: () -> Void
+    let disconnect: () -> Void
+    let edit: () -> Void
+    let duplicate: () -> Void
+    let delete: () -> Void
+
+    var body: some View {
+        Button(action: select) {
+            HStack(spacing: 8) {
+                ZStack(alignment: .bottomTrailing) {
+                    Image(systemName: "server.rack")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isSelected ? .primary : .secondary)
+
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 6, height: 6)
+                        .overlay(
+                            Circle()
+                                .stroke(ShardTheme.sidebar, lineWidth: 1)
+                        )
+                        .offset(x: 2, y: 2)
+                }
+                .frame(width: 18)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 5) {
+                        Text(connection.name)
+                            .font(.callout.weight(isSelected ? .semibold : .medium))
+                            .lineLimit(1)
+
+                        if connection.isReadOnly {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 8))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if connection.effectiveEnvironment != .development {
+                            Text(
+                                connection.effectiveEnvironment == .production
+                                    ? "PROD"
+                                    : "STAGE"
+                            )
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundStyle(environmentColor)
+                        }
+                    }
+
+                    Text("\(connection.host):\(connection.port)")
+                        .font(.caption2)
+                        .foregroundStyle(ShardTheme.mutedText)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 4)
+
+                if state == .connecting {
+                    ProgressView()
+                        .controlSize(.mini)
+                } else if isSelected {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(ShardTheme.subtleText)
+                }
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isSelected ? ShardTheme.selection.opacity(0.9) : .clear)
+            )
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets(top: 1, leading: 5, bottom: 1, trailing: 5))
+        .contextMenu {
+            if state.isConnected || state == .connecting {
+                Button("Disconnect", action: disconnect)
+            } else {
+                Button("Connect", action: select)
+            }
+            Divider()
+            Button("Edit…", action: edit)
+            Button("Duplicate", action: duplicate)
+            Divider()
+            Button("Delete…", role: .destructive, action: delete)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(connection.name)
+        .accessibilityValue("\(connection.host):\(connection.port), \(state.label)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var statusColor: Color {
+        switch state {
+        case .connected:
+            return .green
+        case .connecting:
+            return .orange
+        case .failed:
+            return .red
+        case .disconnected:
+            return .secondary
+        }
+    }
+
+    private var environmentColor: Color {
+        switch connection.effectiveEnvironment {
+        case .development: return .green
+        case .staging: return .orange
+        case .production: return .red
+        }
+    }
+}
+
+private struct SidebarExplorerStatusRow: View {
+    let systemImage: String
+    let title: String
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(.caption)
+            .foregroundStyle(ShardTheme.mutedText)
+            .padding(.vertical, 5)
+            .accessibilityElement(children: .combine)
     }
 }
 

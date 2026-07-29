@@ -41,8 +41,24 @@ enum AppAppearance: String, CaseIterable, Identifiable {
     }
 }
 
+enum ConnectionSwitcherLocation: String, CaseIterable, Identifiable {
+    case toolbar
+    case sidebar
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .toolbar: return "Toolbar"
+        case .sidebar: return "Sidebar"
+        }
+    }
+}
+
 struct SettingsView: View {
     @AppStorage("appearance.mode") private var appearanceMode = AppAppearance.system.rawValue
+    @AppStorage("connectionSwitcher.location")
+    private var connectionSwitcherLocation = ConnectionSwitcherLocation.sidebar.rawValue
     @AppStorage("history.maximumEntries") private var maximumHistoryEntries = 50
     @AppStorage("editor.lineWrapping") private var lineWrapping = true
 
@@ -55,6 +71,18 @@ struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+            }
+            Section("Navigation") {
+                Picker("Connections", selection: $connectionSwitcherLocation) {
+                    ForEach(ConnectionSwitcherLocation.allCases) { location in
+                        Text(location.title).tag(location.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text("Choose where the connection switcher appears.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Editor") {
                 Toggle("Wrap long query lines", isOn: $lineWrapping)
@@ -73,7 +101,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 430, height: 330)
+        .frame(width: 430, height: 400)
         .onAppear {
             maximumHistoryEntries = normalizedHistoryLimit
         }

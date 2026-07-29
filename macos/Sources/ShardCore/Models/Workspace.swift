@@ -40,6 +40,7 @@ public struct QueryDocument: Codable, Identifiable, Equatable, Sendable {
 
 public struct QueryRun: Codable, Identifiable, Equatable, Sendable {
     public let id: UUID
+    public let connectionID: UUID?
     public let documentID: UUID
     public let script: String
     public let database: String
@@ -51,11 +52,16 @@ public struct QueryRun: Codable, Identifiable, Equatable, Sendable {
     public let hasMore: Bool
 
     public var queryIdentity: QueryIdentity {
-        QueryIdentity(script: script, database: database)
+        QueryIdentity(
+            script: script,
+            database: database,
+            connectionID: connectionID
+        )
     }
 
     public init(
         id: UUID = UUID(),
+        connectionID: UUID? = nil,
         documentID: UUID,
         script: String,
         database: String,
@@ -67,6 +73,7 @@ public struct QueryRun: Codable, Identifiable, Equatable, Sendable {
         hasMore: Bool = false
     ) {
         self.id = id
+        self.connectionID = connectionID
         self.documentID = documentID
         self.script = script
         self.database = database
@@ -82,12 +89,18 @@ public struct QueryRun: Codable, Identifiable, Equatable, Sendable {
 public struct QueryIdentity: Hashable, Sendable {
     public let script: String
     public let database: String
+    public let connectionID: UUID?
 
-    public init(script: String, database: String) {
+    public init(
+        script: String,
+        database: String,
+        connectionID: UUID? = nil
+    ) {
         self.script = script
             .replacingOccurrences(of: "\r\n", with: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         self.database = database.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.connectionID = connectionID
     }
 }
 
@@ -303,6 +316,7 @@ public struct ExplainPlan: Identifiable, Equatable, Sendable {
 
 public struct FavoriteQuery: Codable, Identifiable, Equatable, Sendable {
     public let id: UUID
+    public var connectionID: UUID?
     public var title: String
     public var script: String
     public var database: String
@@ -310,11 +324,16 @@ public struct FavoriteQuery: Codable, Identifiable, Equatable, Sendable {
     public let createdAt: Date
 
     public var queryIdentity: QueryIdentity {
-        QueryIdentity(script: script, database: database)
+        QueryIdentity(
+            script: script,
+            database: database,
+            connectionID: connectionID
+        )
     }
 
     public init(
         id: UUID = UUID(),
+        connectionID: UUID? = nil,
         title: String,
         script: String,
         database: String,
@@ -322,6 +341,7 @@ public struct FavoriteQuery: Codable, Identifiable, Equatable, Sendable {
         createdAt: Date = Date()
     ) {
         self.id = id
+        self.connectionID = connectionID
         self.title = title
         self.script = script
         self.database = database
