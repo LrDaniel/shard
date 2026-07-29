@@ -22,6 +22,9 @@ struct DocumentSheet: View {
         .background(
             FindShortcutMonitor(action: model.findInDocumentSheet)
         )
+        .background(
+            OutsideClickDismissMonitor(action: dismiss.callAsFunction)
+        )
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(
@@ -191,6 +194,9 @@ private struct DocumentDiffView: View {
             .padding(12)
         }
         .frame(width: 900, height: 620)
+        .background(
+            OutsideClickDismissMonitor(action: dismiss.callAsFunction)
+        )
     }
 
     private func diffPane(
@@ -329,5 +335,86 @@ struct DocumentLineDiff {
             offset += rangeLength
         }
         return highlights
+    }
+}
+
+struct OutsideClickDismissMonitor: NSViewRepresentable {
+    let action: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(action: action)
+    }
+
+    func makeNSView(context: Context) -> MonitoringView {
+        let view = MonitoringView()
+        view.onWindowChange = context.coordinator.attach
+        return view
+    }
+
+    func updateNSView(_ nsView: MonitoringView, context: Context) {
+        context.coordinator.action = action
+    }
+
+    static func dismantleNSView(
+        _ nsView: MonitoringView,
+        coordinator: Coordinator
+    ) {
+        coordinator.detach()
+    }
+
+    @MainActor
+    final class Coordinator {
+        var action: () -> Void
+
+        private weak var modalWindow: NSWindow?
+        private var localMonitor: Any?
+        private var isDismissing = false
+
+        init(action: @escaping () -> Void) {
+            self.action = action
+        }
+
+        func attach(to window: NSWindow?) {
+            guard modalWindow !== window else { return }
+            detach()
+            modalWindow = window
+            guard window != nil else { return }
+
+            localMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+            ) { [weak self] event in
+                self?.handle(event)
+                return event
+            }
+        }
+
+        func detach() {
+            if let localMonitor {
+                NSEvent.removeMonitor(localMonitor)
+            }
+            localMonitor = nil
+            modalWindow = nil
+            isDismissing = false
+        }
+
+        private func handle(_ event: NSEvent) {
+            guard !isDismissing,
+                  let modalWindow,
+                  event.window !== modalWindow else {
+                return
+            }
+
+            isDismissing = true
+            action()
+        }
+    }
+
+    final class MonitoringView: NSView {
+        var onWindowChange: ((NSWindow?) -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            onWindowChange?(window)
+        }
     }
 }

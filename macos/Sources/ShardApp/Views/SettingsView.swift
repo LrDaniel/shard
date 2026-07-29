@@ -59,6 +59,7 @@ struct SettingsView: View {
     @AppStorage("appearance.mode") private var appearanceMode = AppAppearance.system.rawValue
     @AppStorage("connectionSwitcher.location")
     private var connectionSwitcherLocation = ConnectionSwitcherLocation.sidebar.rawValue
+    @AppStorage("sidebar.showsRecentQueries") private var showsRecentQueries = true
     @AppStorage("history.maximumEntries") private var maximumHistoryEntries = 50
     @AppStorage("editor.lineWrapping") private var lineWrapping = true
 
@@ -83,6 +84,11 @@ struct SettingsView: View {
                 Text("Choose where the connection switcher appears.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                Toggle(
+                    "Show recent queries in sidebar",
+                    isOn: $showsRecentQueries
+                )
             }
             Section("Editor") {
                 Toggle("Wrap long query lines", isOn: $lineWrapping)

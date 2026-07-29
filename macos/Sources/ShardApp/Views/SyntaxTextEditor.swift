@@ -58,9 +58,16 @@ enum SyntaxEditorTheme {
     )
 }
 
-struct SyntaxBackgroundHighlight {
+struct SyntaxBackgroundHighlight: Equatable {
     let range: NSRange
     let color: NSColor
+
+    static func == (
+        lhs: SyntaxBackgroundHighlight,
+        rhs: SyntaxBackgroundHighlight
+    ) -> Bool {
+        lhs.range == rhs.range && lhs.color.isEqual(rhs.color)
+    }
 }
 
 struct SyntaxTextEditor: NSViewRepresentable {
@@ -118,6 +125,10 @@ struct SyntaxTextEditor: NSViewRepresentable {
         textView.backgroundColor = SyntaxEditorTheme.background
         textView.insertionPointColor = SyntaxEditorTheme.foreground
         textView.string = text
+        textView.onCancelCompletion = {
+            [weak coordinator = context.coordinator] prefix in
+            coordinator?.suppressAutomaticCompletion(prefix: prefix)
+        }
         scrollView.documentView = textView
 
         context.coordinator.configure(textView)
@@ -141,7 +152,8 @@ struct SyntaxTextEditor: NSViewRepresentable {
         textView.backgroundColor = SyntaxEditorTheme.background
         textView.insertionPointColor = SyntaxEditorTheme.foreground
 
-        if textView.string != text {
+        let textChanged = textView.string != text
+        if textChanged {
             let selection = textView.selectedRange()
             context.coordinator.isApplyingExternalUpdate = true
             textView.string = text
@@ -153,7 +165,9 @@ struct SyntaxTextEditor: NSViewRepresentable {
                 )
             )
         }
-        context.coordinator.configure(textView)
+        if textChanged || context.coordinator.configurationNeedsRefresh {
+            context.coordinator.configure(textView)
+        }
         context.coordinator.focus(
             textView,
             ifRequestedBy: focusRequest,
@@ -169,6 +183,12 @@ struct SyntaxTextEditor: NSViewRepresentable {
         private var handledFocusRequest = 0
         private var handledFindRequest = 0
         private var completionWorkItem: DispatchWorkItem?
+        private var configurationWorkItem: DispatchWorkItem?
+        private var configuredLanguage: SyntaxLanguage?
+        private var configuredFontSize: CGFloat?
+        private var configuredBackgroundHighlights: [SyntaxBackgroundHighlight] = []
+        private var suppressedCompletionPrefix: String?
+        private static var expressionCache: [String: NSRegularExpression] = [:]
 
         init(parent: SyntaxTextEditor) {
             self.parent = parent
@@ -178,8 +198,14 @@ struct SyntaxTextEditor: NSViewRepresentable {
             guard !isApplyingExternalUpdate else { return }
             guard let textView = notification.object as? NSTextView else { return }
             parent.text = textView.string
-            configure(textView)
+            scheduleConfiguration(for: textView)
             scheduleCompletions(for: textView)
+        }
+
+        var configurationNeedsRefresh: Bool {
+            configuredLanguage != parent.language ||
+                configuredFontSize != parent.fontSize ||
+                configuredBackgroundHighlights != parent.backgroundHighlights
         }
 
         func textView(
@@ -204,6 +230,8 @@ struct SyntaxTextEditor: NSViewRepresentable {
         }
 
         func configure(_ textView: NSTextView) {
+            configurationWorkItem?.cancel()
+            configurationWorkItem = nil
             guard let storage = textView.textStorage else { return }
             let visibleOrigin = textView.enclosingScrollView?
                 .contentView.bounds.origin
@@ -278,6 +306,9 @@ struct SyntaxTextEditor: NSViewRepresentable {
                 textView,
                 preserving: visibleOrigin
             )
+            configuredLanguage = parent.language
+            configuredFontSize = parent.fontSize
+            configuredBackgroundHighlights = parent.backgroundHighlights
         }
 
         func focus(
@@ -327,22 +358,45 @@ struct SyntaxTextEditor: NSViewRepresentable {
                   parent.language == .javascript,
                   !parent.completions.isEmpty,
                   let completionTextView = textView as? SyntaxCompletionTextView,
-                  completionTextView.completionPrefix.count >= 2,
-                  parent.completions.contains(where: {
-                      $0.range(
-                          of: completionTextView.completionPrefix,
-                          options: [.anchored, .caseInsensitive]
-                      ) != nil
-                  }) else {
+                  completionTextView.completionPrefix.count >= 2 else {
                 return
             }
+            let prefix = completionTextView.completionPrefix.lowercased()
+            guard suppressedCompletionPrefix != prefix else { return }
+            suppressedCompletionPrefix = nil
 
             let workItem = DispatchWorkItem { [weak textView] in
-                textView?.complete(nil)
+                guard let completionTextView =
+                    textView as? SyntaxCompletionTextView else {
+                    return
+                }
+                completionTextView.automaticCompletionIsActive = true
+                completionTextView.complete(nil)
+                completionTextView.automaticCompletionIsActive =
+                    completionTextView.selectedRange().length > 0
             }
             completionWorkItem = workItem
             DispatchQueue.main.asyncAfter(
-                deadline: .now() + 0.18,
+                deadline: .now() + 0.06,
+                execute: workItem
+            )
+        }
+
+        fileprivate func suppressAutomaticCompletion(prefix: String) {
+            completionWorkItem?.cancel()
+            completionWorkItem = nil
+            suppressedCompletionPrefix = prefix.lowercased()
+        }
+
+        private func scheduleConfiguration(for textView: NSTextView) {
+            configurationWorkItem?.cancel()
+            let workItem = DispatchWorkItem { [weak self, weak textView] in
+                guard let self, let textView else { return }
+                configure(textView)
+            }
+            configurationWorkItem = workItem
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + 0.045,
                 execute: workItem
             )
         }
@@ -352,13 +406,26 @@ struct SyntaxTextEditor: NSViewRepresentable {
             color: NSColor,
             to storage: NSTextStorage
         ) {
-            guard let expression = try? NSRegularExpression(pattern: pattern) else {
+            guard let expression = Self.expression(for: pattern) else {
                 return
             }
             let range = NSRange(location: 0, length: storage.length)
             for match in expression.matches(in: storage.string, range: range) {
                 storage.addAttribute(.foregroundColor, value: color, range: match.range)
             }
+        }
+
+        private static func expression(
+            for pattern: String
+        ) -> NSRegularExpression? {
+            if let cached = expressionCache[pattern] {
+                return cached
+            }
+            guard let expression = try? NSRegularExpression(pattern: pattern) else {
+                return nil
+            }
+            expressionCache[pattern] = expression
+            return expression
         }
 
         private func stabilizeDocumentLayout(
@@ -409,6 +476,8 @@ private final class SyntaxCompletionTextView: NSTextView {
     private static let completionCharacters = CharacterSet
         .alphanumerics
         .union(CharacterSet(charactersIn: "_.$"))
+    var onCancelCompletion: ((String) -> Void)?
+    var automaticCompletionIsActive = false
 
     override var rangeForUserCompletion: NSRange {
         let selection = selectedRange()
@@ -436,6 +505,77 @@ private final class SyntaxCompletionTextView: NSTextView {
         let range = rangeForUserCompletion
         guard range.length > 0 else { return "" }
         return (string as NSString).substring(with: range)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if automaticCompletionIsActive {
+            switch event.keyCode {
+            case 53, 51:
+                dismissProvisionalCompletion()
+                return
+            case 36, 48, 76:
+                automaticCompletionIsActive = false
+                super.keyDown(with: event)
+                onCancelCompletion?(completionPrefix)
+                return
+            case 125, 126:
+                super.keyDown(with: event)
+                return
+            default:
+                dismissProvisionalCompletion()
+                super.keyDown(with: event)
+                return
+            }
+        }
+        automaticCompletionIsActive = false
+        super.keyDown(with: event)
+    }
+
+    override func cancelOperation(_ sender: Any?) {
+        if automaticCompletionIsActive {
+            dismissProvisionalCompletion()
+        } else {
+            super.cancelOperation(sender)
+        }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        automaticCompletionIsActive = false
+        super.mouseDown(with: event)
+    }
+
+    private var typedCompletionPrefix: String {
+        let selection = selectedRange()
+        let source = string as NSString
+        let end = min(selection.location, source.length)
+        var location = end
+        while location > 0 {
+            let scalar = UnicodeScalar(source.character(at: location - 1))
+            guard let scalar,
+                  Self.completionCharacters.contains(scalar) else {
+                break
+            }
+            location -= 1
+        }
+        return source.substring(
+            with: NSRange(location: location, length: end - location)
+        )
+    }
+
+    private func dismissProvisionalCompletion() {
+        let prefix = typedCompletionPrefix
+        let selection = selectedRange()
+        automaticCompletionIsActive = false
+        onCancelCompletion?(prefix)
+
+        if selection.length > 0,
+           shouldChangeText(in: selection, replacementString: "") {
+            textStorage?.replaceCharacters(in: selection, with: "")
+            setSelectedRange(NSRange(location: selection.location, length: 0))
+            didChangeText()
+        }
+
+        super.cancelOperation(nil)
     }
 }
 

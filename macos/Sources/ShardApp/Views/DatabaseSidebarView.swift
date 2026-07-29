@@ -9,6 +9,7 @@ struct DatabaseSidebarView: View {
     @EnvironmentObject private var model: AppModel
     @AppStorage("connectionSwitcher.location")
     private var connectionSwitcherLocation = ConnectionSwitcherLocation.sidebar.rawValue
+    @AppStorage("sidebar.showsRecentQueries") private var showsRecentQueries = true
     @State private var recentsExpanded = false
     @State private var savedQueriesExpanded = false
     @State private var showingClearRecentsConfirmation = false
@@ -173,6 +174,7 @@ struct DatabaseSidebarView: View {
         .environment(\.defaultMinListRowHeight, 23)
         .shardSidebarListBackground()
         .background(sidebarBackground)
+        .clipped()
         .accessibilityLabel("Connections and database explorer")
     }
 
@@ -208,7 +210,7 @@ struct DatabaseSidebarView: View {
 
     @ViewBuilder
     private var shortcutSections: some View {
-        if !model.currentQueryHistory.isEmpty {
+        if showsRecentQueries && !model.currentQueryHistory.isEmpty {
             Section {
                 ForEach(visibleRecentQueries) { run in
                     SidebarQueryShortcutRow(

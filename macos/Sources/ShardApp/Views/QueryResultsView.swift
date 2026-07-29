@@ -263,12 +263,6 @@ private struct BSONOutlineRow: View {
             .contextMenu {
                 resultContextMenu
             }
-            .simultaneousGesture(
-                TapGesture(count: 2).onEnded {
-                    guard node.isRootDocument else { return }
-                    model.inspectDocument(node.source.extendedJSON)
-                }
-            )
 
             Divider()
 
@@ -737,6 +731,9 @@ private struct InsertDocumentSheet: View {
         }
         .frame(width: 760, height: 620)
         .background(FindShortcutMonitor(action: showFind))
+        .background(
+            OutsideClickDismissMonitor(action: dismiss.callAsFunction)
+        )
         .onAppear {
             focusRequest += 1
         }

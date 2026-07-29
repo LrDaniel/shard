@@ -122,9 +122,16 @@ final class AppModel: ObservableObject {
     @Published var favoriteQueries: [FavoriteQuery] = []
     @Published var savedCollectionViews: [SavedCollectionView] = []
     @Published var savedViewEditorTarget: SavedViewEditorTarget?
-    @Published var autocompleteSuggestions: [String] = []
-    @Published var sampledFieldPaths: [String] = []
-    @Published var sampledDatabaseFields: [DatabaseField] = []
+    @Published var autocompleteSuggestions: [String] = [] {
+        didSet { rebuildQueryEditorCompletions() }
+    }
+    @Published var sampledFieldPaths: [String] = [] {
+        didSet { rebuildQueryEditorCompletions() }
+    }
+    @Published var sampledDatabaseFields: [DatabaseField] = [] {
+        didSet { rebuildQueryEditorCompletions() }
+    }
+    @Published private(set) var queryEditorCompletions: [String] = []
     @Published var isSamplingSchema = false
     @Published var destructiveQueryConfirmation: DestructiveQueryConfirmation?
     @Published var indexManagerTarget: IndexManagerTarget?
@@ -143,6 +150,7 @@ final class AppModel: ObservableObject {
     private var session: DatabaseSession?
     private var connectionAttemptID = UUID()
     private var schemaSampleTarget: String?
+    private var workspaceSaveWorkItem: DispatchWorkItem?
 
     init() {
         secrets = KeychainStore()
@@ -152,6 +160,7 @@ final class AppModel: ObservableObject {
             persistence = nil
         }
         selectedConnectionID = connections.first?.id
+        rebuildQueryEditorCompletions()
         rebuildExplorer(databases: [], collections: [:])
 
         Task { [weak self] in
@@ -205,26 +214,9 @@ final class AppModel: ObservableObject {
                 else { return }
                 self.workspace.documents[currentIndex] = document
                 self.workspace.documents[currentIndex].isDirty = true
-                self.saveWorkspace()
+                self.scheduleWorkspaceSave()
             }
         )
-    }
-
-    var queryEditorCompletions: [String] {
-        let schemaCompletions = sampledDatabaseFields.flatMap {
-            Self.completions(for: $0)
-        }
-        return Array(
-            Set(
-                autocompleteSuggestions
-                    + sampledFieldPaths
-                    + schemaCompletions
-                    + Self.mongoShellCompletions
-            )
-        )
-        .sorted {
-            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
-        }
     }
 
     func addQuery() {
@@ -1669,10 +1661,25 @@ final class AppModel: ObservableObject {
     }
 
     private func saveWorkspace() {
+        workspaceSaveWorkItem?.cancel()
+        workspaceSaveWorkItem = nil
         let value = workspace
         Task {
             try? await persistence?.saveWorkspace(value)
         }
+    }
+
+    private func scheduleWorkspaceSave() {
+        workspaceSaveWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.workspaceSaveWorkItem = nil
+            self?.saveWorkspace()
+        }
+        workspaceSaveWorkItem = workItem
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + 0.35,
+            execute: workItem
+        )
     }
 
     private func collectionLocation(
@@ -2051,38 +2058,21 @@ final class AppModel: ObservableObject {
         return Array(fields.prefix(4))
     }
 
-    private static func completions(for field: DatabaseField) -> [String] {
-        let path = field.path
-        let types = Set(field.types + field.elementTypes)
-        var values = [path, "\(path): "]
-
-        if types.contains("ObjectId") {
-            values.append("\(path): ObjectId(\"\")")
+    private func rebuildQueryEditorCompletions() {
+        let sampledTopLevelFields = sampledDatabaseFields.lazy
+            .map(\.path)
+            .filter { !$0.contains(".") }
+        let resultTopLevelFields = sampledFieldPaths.lazy.filter {
+            !$0.contains(".")
         }
-        if types.contains("Date") {
-            values.append("\(path): { $gte: ISODate(\"\") }")
+        var completions = Set(Self.mongoShellCompletions)
+        completions.formUnion(autocompleteSuggestions)
+        completions.formUnion(sampledTopLevelFields)
+        completions.formUnion(resultTopLevelFields)
+        queryEditorCompletions = Array(completions)
+        .sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
         }
-        if types.contains("String") {
-            values.append(contentsOf: [
-                "\(path): \"\"",
-                "\(path): { $regex: \"\", $options: \"i\" }"
-            ])
-        }
-        if types.contains("Boolean") {
-            values.append("\(path): true")
-        }
-        if !types.isDisjoint(
-            with: ["Integer", "Double", "Int32", "Long", "Decimal128"]
-        ) {
-            values.append("\(path): { $gte: 0 }")
-        }
-        if field.types.contains("Array") {
-            values.append("\(path): { $elemMatch: {} }")
-        }
-        if field.isIndexed {
-            values.append("\(path): 1")
-        }
-        return values
     }
 
     private static func fieldPaths(in value: JSONValue) -> [String] {
